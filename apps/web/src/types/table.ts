@@ -13,7 +13,7 @@ export interface ColumnInfo {
   fixed?: "left" | "right";
 
   // 필터 설정 (배열로 여러 필터 지원)
-  filter?: {
+  headerFilterOptions?: {
     key: string;
     type: "text" | "select" | "number" | "date" | "range" | "multi-select";
     label?: string;

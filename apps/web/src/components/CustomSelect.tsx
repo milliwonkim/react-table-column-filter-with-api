@@ -66,7 +66,7 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
   // 검색어에 따른 필터링된 옵션
   const filteredOptions = useMemo(() => {
     if (!searchable || !searchValue) return options;
-    return options.headerFilterOptions((option) =>
+    return options.filter((option) =>
       option.label.toLowerCase().includes(searchValue.toLowerCase())
     );
   }, [options, searchValue, searchable]);
