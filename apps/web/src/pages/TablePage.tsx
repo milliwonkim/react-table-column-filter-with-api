@@ -1,9 +1,12 @@
-import React, { useCallback, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import React, { useCallback, useState } from "react";
 import FilterableTable from "../components/FilterableTable";
 import type { FilterValue, TableData } from "../types/table";
-import { columnInfo } from "./tableColumnInfo";
 import apiClient from "../utils/axios";
+import {
+  columnInfoWithFilterRenderer,
+  columnInfoWithHeaderOptions,
+} from "./tableColumnInfo";
 
 const TablePage: React.FC = React.memo(() => {
   const [selectedRows, setSelectedRows] = useState<(string | number)[]>([]);
@@ -246,7 +249,7 @@ const TablePage: React.FC = React.memo(() => {
       </div>
 
       <FilterableTable
-        columnInfo={columnInfo}
+        columnInfo={columnInfoWithFilterRenderer}
         data={tableData}
         onFilterChange={handleFilterChange}
         loading={loading}
@@ -259,6 +262,31 @@ const TablePage: React.FC = React.memo(() => {
         loadingText="직원 데이터를 불러오는 중..."
         className="custom-table"
       />
+
+      <h2>2. 기존 headerFilterOptions 방식 (하위 호환성)</h2>
+      <p>기존 방식으로도 계속 사용할 수 있습니다.</p>
+      <FilterableTable
+        columnInfo={columnInfoWithHeaderOptions}
+        data={tableData}
+        selectedRows={selectedRows}
+        onSelectionChange={handleSelectionChange}
+        onFilterChange={handleFilterChange}
+        onRowClick={handleRowClick}
+      />
+
+      <div
+        style={{
+          marginTop: "20px",
+          padding: "10px",
+          backgroundColor: "#f5f5f5",
+        }}
+      >
+        <h3>현재 선택된 행:</h3>
+        <pre>{JSON.stringify(selectedRows, null, 2)}</pre>
+
+        <h3>현재 필터:</h3>
+        <pre>{JSON.stringify(filters, null, 2)}</pre>
+      </div>
     </div>
   );
 });

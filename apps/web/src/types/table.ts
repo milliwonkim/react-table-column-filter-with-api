@@ -1,5 +1,13 @@
 import React from "react";
 
+// 필터 값의 기본 타입
+export type BaseFilterValue = string | number | null;
+
+// 필터 정보를 위한 제네릭 타입
+export interface FilterInfo<T = BaseFilterValue> {
+  [key: string]: T;
+}
+
 export interface ColumnInfo {
   key: string;
   label: string;
@@ -12,7 +20,14 @@ export interface ColumnInfo {
   resizable?: boolean;
   fixed?: "left" | "right";
 
-  // 필터 설정 (배열로 여러 필터 지원)
+  // 커스텀 필터 렌더러
+  filterRenderer?: React.ComponentType<{
+    value: { [key: string]: string | number | null };
+    onChange: (filterKey: string, value: string | number | null) => void;
+    column: ColumnInfo;
+  }>;
+
+  // 필터 설정 (배열로 여러 필터 지원) - 기존 방식과 호환성을 위해 유지
   headerFilterOptions?: {
     key: string;
     type: "text" | "select" | "number" | "date" | "range" | "multi-select";

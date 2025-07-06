@@ -7,13 +7,326 @@ import type {
 } from "../types/table";
 import CustomSelect from "./CustomSelect";
 
+/**
+ * FilterableTable 사용법 예시:
+ *
+ * // 1. 커스텀 필터 컴포넌트 정의
+ * const MyCustomFilter: React.FC<{
+ *   value: { [key: string]: string | number | null };
+ *   onChange: (filterKey: string, value: string | number | null) => void;
+ *   column: ColumnInfo;
+ * }> = ({ value, onChange, column }) => {
+ *   return (
+ *     <input
+ *       type="text"
+ *       value={typeof value.name === "string" ? value.name : ""}
+ *       onChange={(e) => onChange("name", e.target.value || null)}
+ *       placeholder={`${column.label} 검색`}
+ *     />
+ *   );
+ * };
+ *
+ * // 2. columnInfo에 filterRenderer 추가
+ * const columnInfo: ColumnInfo[] = [
+ *   {
+ *     key: "name",
+ *     label: "이름",
+ *     type: "default",
+ *     filterRenderer: MyCustomFilter, // 또는 TextFilter, NumberFilter, SelectFilter 사용
+ *   },
+ *   {
+ *     key: "age",
+ *     label: "나이",
+ *     type: "default",
+ *     filterRenderer: NumberFilter,
+ *   },
+ *   {
+ *     key: "status",
+ *     label: "상태",
+ *     type: "default",
+ *     filterRenderer: (props) => (
+ *       <SelectFilter
+ *         {...props}
+ *         options={[
+ *           { value: "active", label: "활성" },
+ *           { value: "inactive", label: "비활성" },
+ *         ]}
+ *       />
+ *     ),
+ *   },
+ * ];
+ */
+
+// 예시 필터 컴포넌트들
+export const TextFilter: React.FC<{
+  value: { [key: string]: string | number | null };
+  onChange: (filterKey: string, value: string | number | null) => void;
+  column: ColumnInfo;
+}> = ({ value, onChange, column }) => {
+  const filterValue = value[column.key] || "";
+
+  return (
+    <input
+      type="text"
+      value={typeof filterValue === "string" ? filterValue : ""}
+      onChange={(e) => onChange(column.key, e.target.value || null)}
+      placeholder={`${column.label} 검색`}
+      style={{
+        width: "100%",
+        padding: "4px",
+        fontSize: "12px",
+        border: "1px solid #ddd",
+        borderRadius: "4px",
+        boxSizing: "border-box",
+      }}
+    />
+  );
+};
+
+export const NumberFilter: React.FC<{
+  value: { [key: string]: string | number | null };
+  onChange: (filterKey: string, value: string | number | null) => void;
+  column: ColumnInfo;
+}> = ({ value, onChange, column }) => {
+  const filterValue = value[column.key] || "";
+
+  return (
+    <input
+      type="number"
+      value={typeof filterValue === "number" ? filterValue : ""}
+      onChange={(e) => {
+        const numValue = e.target.value === "" ? null : Number(e.target.value);
+        onChange(column.key, numValue);
+      }}
+      placeholder={`${column.label} 검색`}
+      style={{
+        width: "100%",
+        padding: "4px",
+        fontSize: "12px",
+        border: "1px solid #ddd",
+        borderRadius: "4px",
+        boxSizing: "border-box",
+      }}
+    />
+  );
+};
+
+export const SelectFilter: React.FC<{
+  value: { [key: string]: string | number | null };
+  onChange: (filterKey: string, value: string | number | null) => void;
+  column: ColumnInfo;
+  options?: { value: string; label: string }[];
+}> = ({ value, onChange, column, options = [] }) => {
+  const filterValue = value[column.key] || "";
+  const selectOptions = [{ value: "", label: "전체" }, ...options];
+
+  return (
+    <CustomSelect
+      value={typeof filterValue === "string" ? filterValue : ""}
+      onChange={(selectedValue) => {
+        if (selectedValue === "전체" || selectedValue === "") {
+          onChange(column.key, null);
+        } else {
+          onChange(column.key, selectedValue);
+        }
+      }}
+      options={selectOptions}
+      placeholder={`${column.label} 선택`}
+      searchable={true}
+      style={{
+        width: "100%",
+        padding: "4px",
+        fontSize: "12px",
+        border: "1px solid #ddd",
+        borderRadius: "4px",
+        boxSizing: "border-box",
+      }}
+    />
+  );
+};
+
+export const CustomFilter = ({
+  value,
+  onChange,
+  column,
+}: {
+  value: { [key: string]: string | number | null };
+  onChange: (filterKey: string, value: string | number | null) => void;
+  column: ColumnInfo;
+}) => {
+  const nameValue = value.name || "";
+  const ageValue = value.age || "";
+  const locationValue = value.location || "";
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+      <input
+        type="text"
+        value={typeof nameValue === "string" ? nameValue : ""}
+        onChange={(e) => onChange("name", e.target.value || null)}
+        placeholder={`${column.label} 검색`}
+        style={{
+          width: "100%",
+          padding: "4px",
+          fontSize: "12px",
+          border: "1px solid #ddd",
+          borderRadius: "4px",
+          boxSizing: "border-box",
+        }}
+      />
+      <input
+        type="number"
+        value={typeof ageValue === "number" ? ageValue : ""}
+        onChange={(e) => {
+          const numValue =
+            e.target.value === "" ? null : Number(e.target.value);
+          onChange("age", numValue);
+        }}
+        placeholder="나이 검색"
+        style={{
+          width: "100%",
+          padding: "4px",
+          fontSize: "12px",
+          border: "1px solid #ddd",
+          borderRadius: "4px",
+          boxSizing: "border-box",
+        }}
+      />
+      <input
+        type="text"
+        value={typeof locationValue === "string" ? locationValue : ""}
+        onChange={(e) => onChange("location", e.target.value || null)}
+        placeholder="지역 검색"
+        style={{
+          width: "100%",
+          padding: "4px",
+          fontSize: "12px",
+          border: "1px solid #ddd",
+          borderRadius: "4px",
+          boxSizing: "border-box",
+        }}
+      />
+    </div>
+  );
+};
+
+export const DateRangeFilter: React.FC<{
+  value: { [key: string]: string | number | null };
+  onChange: (filterKey: string, value: string | number | null) => void;
+  column: ColumnInfo;
+}> = ({ onChange, column }) => {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+      <input
+        type="date"
+        onChange={(e) =>
+          onChange(`${column.key}_start`, e.target.value || null)
+        }
+        placeholder="시작일"
+        style={{
+          width: "100%",
+          padding: "4px",
+          fontSize: "12px",
+          border: "1px solid #ddd",
+          borderRadius: "4px",
+          boxSizing: "border-box",
+        }}
+      />
+      <input
+        type="date"
+        onChange={(e) => onChange(`${column.key}_end`, e.target.value || null)}
+        placeholder="종료일"
+        style={{
+          width: "100%",
+          padding: "4px",
+          fontSize: "12px",
+          border: "1px solid #ddd",
+          borderRadius: "4px",
+          boxSizing: "border-box",
+        }}
+      />
+    </div>
+  );
+};
+
+export const NumberRangeFilter: React.FC<{
+  value: { [key: string]: string | number | null };
+  onChange: (filterKey: string, value: string | number | null) => void;
+  column: ColumnInfo;
+}> = ({ onChange, column }) => {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+      <input
+        type="number"
+        onChange={(e) => {
+          const numValue =
+            e.target.value === "" ? null : Number(e.target.value);
+          onChange(`${column.key}_min`, numValue);
+        }}
+        placeholder="최소값"
+        style={{
+          width: "100%",
+          padding: "4px",
+          fontSize: "12px",
+          border: "1px solid #ddd",
+          borderRadius: "4px",
+          boxSizing: "border-box",
+        }}
+      />
+      <input
+        type="number"
+        onChange={(e) => {
+          const numValue =
+            e.target.value === "" ? null : Number(e.target.value);
+          onChange(`${column.key}_max`, numValue);
+        }}
+        placeholder="최대값"
+        style={{
+          width: "100%",
+          padding: "4px",
+          fontSize: "12px",
+          border: "1px solid #ddd",
+          borderRadius: "4px",
+          boxSizing: "border-box",
+        }}
+      />
+    </div>
+  );
+};
+
 // 필터 입력 컴포넌트를 별도로 분리하고 memo로 최적화
 const FilterInput = React.memo<{
   column: ColumnInfo;
   filters: FilterValue;
   onChange: (key: string, value: string | number | null) => void;
 }>(({ column, filters, onChange }) => {
-  // 필터가 없으면 null 반환
+  // 커스텀 필터 렌더러가 있으면 우선 사용
+  if (column.filterRenderer) {
+    const FilterComponent = column.filterRenderer;
+
+    // FilterValue를 필터 컴포넌트용 타입으로 변환
+    const filterInfo: { [key: string]: string | number | null } = {};
+    Object.keys(filters).forEach((key) => {
+      const filterValue = filters[key];
+      if (typeof filterValue === "string" || typeof filterValue === "number") {
+        filterInfo[key] = filterValue;
+      }
+    });
+
+    const handleChange = (filterKey: string, value: string | number | null) => {
+      onChange(filterKey, value);
+    };
+
+    return (
+      <FilterComponent
+        value={filterInfo}
+        onChange={handleChange}
+        column={column}
+      />
+    );
+  }
+
+  // 기존 headerFilterOptions 방식 (하위 호환성)
   if (!column.headerFilterOptions || column.headerFilterOptions.length === 0) {
     return null;
   }
