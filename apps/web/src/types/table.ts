@@ -100,8 +100,6 @@ export interface TableProps {
   selectedRows: (string | number)[];
   onSelectionChange: (selectedIds: (string | number)[]) => void;
   isInternalFilter?: boolean; // 내부 필터링 활성화 여부
-  getRowKey: (data: TableData) => string;
-  getFilterKey?: (columnKey: string, filterKey: string) => string; // 필터 키 생성 함수
 
   // 추가 옵션들
   sortable?: boolean;
