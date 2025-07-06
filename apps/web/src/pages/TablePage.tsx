@@ -248,8 +248,8 @@ const TablePage: React.FC = React.memo(() => {
       <FilterableTable
         columnInfo={columnInfo}
         data={tableData}
-        loading={loading}
         onFilterChange={handleFilterChange}
+        loading={loading}
         selectedRows={selectedRows}
         onSelectionChange={handleSelectionChange}
         onRowClick={handleRowClick}
@@ -258,11 +258,6 @@ const TablePage: React.FC = React.memo(() => {
         emptyText="직원 데이터가 없습니다."
         loadingText="직원 데이터를 불러오는 중..."
         className="custom-table"
-        style={{
-          border: "1px solid #dee2e6",
-          borderRadius: "8px",
-          overflow: "hidden",
-        }}
       />
     </div>
   );

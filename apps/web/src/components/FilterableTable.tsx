@@ -12,8 +12,7 @@ const FilterInput = React.memo<{
   column: ColumnInfo;
   filters: FilterValue;
   onChange: (key: string, value: string | number | null) => void;
-  onKeyUp: () => void;
-}>(({ column, filters, onChange, onKeyUp }) => {
+}>(({ column, filters, onChange }) => {
   // 필터가 없으면 null 반환
   if (!column.headerFilterOptions || column.headerFilterOptions.length === 0) {
     return null;
@@ -45,14 +44,6 @@ const FilterInput = React.memo<{
           } else {
             onChange(filterConfig.key, selectedValue);
           }
-        };
-
-        const handleKeyUp = () => {
-          onKeyUp();
-        };
-
-        const handleMouseUp = () => {
-          onKeyUp();
         };
 
         const filterStyle: React.CSSProperties = {
@@ -97,8 +88,6 @@ const FilterInput = React.memo<{
                 type="number"
                 value={typeof filterValue === "number" ? filterValue : ""}
                 onChange={handleChange}
-                onKeyUp={handleKeyUp}
-                onMouseUp={handleMouseUp}
                 placeholder={placeholder}
                 min={filterConfig.min}
                 max={filterConfig.max}
@@ -115,8 +104,6 @@ const FilterInput = React.memo<{
                 type="date"
                 value={typeof filterValue === "string" ? filterValue : ""}
                 onChange={handleChange}
-                onKeyUp={handleKeyUp}
-                onMouseUp={handleMouseUp}
                 className={filterConfig.className || ""}
                 style={filterStyle}
               />
@@ -131,8 +118,6 @@ const FilterInput = React.memo<{
                 type="text"
                 value={typeof filterValue === "string" ? filterValue : ""}
                 onChange={handleChange}
-                onKeyUp={handleKeyUp}
-                onMouseUp={handleMouseUp}
                 placeholder={placeholder}
                 className={filterConfig.className || ""}
                 style={filterStyle}
@@ -152,38 +137,28 @@ const FilterRow = React.memo<{
   columnInfo: ColumnInfo[];
   filters: FilterValue;
   onFilterChange: (key: string, value: string | number | null) => void;
-  onFilterKeyUp: () => void;
   filterHeaderStyles: React.CSSProperties;
-}>(
-  ({
-    columnInfo,
-    filters,
-    onFilterChange,
-    onFilterKeyUp,
-    filterHeaderStyles,
-  }) => {
-    return (
-      <tr style={{ backgroundColor: "#fafafa" }}>
-        <th style={filterHeaderStyles}>{/* 체크박스 열은 빈 공간 */}</th>
-        {columnInfo.map((column) => (
-          <th
-            key={`headerFilterOptions-${column.key}`}
-            style={filterHeaderStyles}
-          >
-            {column.filterable !== false && (
-              <FilterInput
-                column={column}
-                filters={filters}
-                onChange={onFilterChange}
-                onKeyUp={onFilterKeyUp}
-              />
-            )}
-          </th>
-        ))}
-      </tr>
-    );
-  }
-);
+}>(({ columnInfo, filters, onFilterChange, filterHeaderStyles }) => {
+  return (
+    <tr style={{ backgroundColor: "#fafafa" }}>
+      <th style={filterHeaderStyles}>{/* 체크박스 열은 빈 공간 */}</th>
+      {columnInfo.map((column) => (
+        <th
+          key={`headerFilterOptions-${column.key}`}
+          style={filterHeaderStyles}
+        >
+          {column.filterable !== false && (
+            <FilterInput
+              column={column}
+              filters={filters}
+              onChange={onFilterChange}
+            />
+          )}
+        </th>
+      ))}
+    </tr>
+  );
+});
 
 FilterRow.displayName = "FilterRow";
 
@@ -387,11 +362,6 @@ const FilterableTable: React.FC<TableProps> = React.memo(
       []
     );
 
-    // 실시간 커서 위치 추적 핸들러
-    const handleFilterKeyUp = useCallback(() => {
-      // 커서 위치 추적은 FilterInput 컴포넌트 내부에서 처리
-    }, []);
-
     const handleSelectAll = useCallback(
       (checked: boolean) => {
         if (checked) {
@@ -461,32 +431,8 @@ const FilterableTable: React.FC<TableProps> = React.memo(
       []
     );
 
-    if (loading && data.length === 0) {
-      return (
-        <div style={{ textAlign: "center", padding: "20px" }}>
-          {loadingText}
-        </div>
-      );
-    }
-
     return (
       <div style={{ overflowX: "auto", ...style }} className={className}>
-        {/* 로딩 인디케이터 (데이터가 있을 때만) */}
-        {loading && data.length > 0 && (
-          <div
-            style={{
-              textAlign: "center",
-              padding: "8px",
-              backgroundColor: "#f8f9fa",
-              borderBottom: "1px solid #dee2e6",
-              fontSize: "12px",
-              color: "#666",
-            }}
-          >
-            🔄 서버에서 데이터를 업데이트하는 중...
-          </div>
-        )}
-
         <table
           style={{
             width: "100%",
@@ -552,26 +498,38 @@ const FilterableTable: React.FC<TableProps> = React.memo(
               columnInfo={columnInfo}
               filters={filters}
               onFilterChange={handleFilterChange}
-              onFilterKeyUp={handleFilterKeyUp}
               filterHeaderStyles={filterHeaderStyles}
             />
           </thead>
 
           <tbody>
-            {data.map((row, index) => (
-              <TableRow
-                key={row.id}
-                row={row}
-                columnInfo={columnInfo}
-                selectedRows={selectedRows}
-                onSelectionChange={handleSelectRow}
-                onRowClick={onRowClick}
-                onCellClick={onCellClick}
-                rowClassName={rowClassName}
-                rowStyle={rowStyle}
-                index={index}
-              />
-            ))}
+            {data.map((row, index) => {
+              if (loading) {
+                return (
+                  <tr>
+                    <td colSpan={data.length}>
+                      <div style={{ textAlign: "center", padding: "20px" }}>
+                        {loadingText}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              }
+              return (
+                <TableRow
+                  key={row.id}
+                  row={row}
+                  columnInfo={columnInfo}
+                  selectedRows={selectedRows}
+                  onSelectionChange={handleSelectRow}
+                  onRowClick={onRowClick}
+                  onCellClick={onCellClick}
+                  rowClassName={rowClassName}
+                  rowStyle={rowStyle}
+                  index={index}
+                />
+              );
+            })}
           </tbody>
         </table>
 
