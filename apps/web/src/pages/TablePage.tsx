@@ -255,7 +255,6 @@ const TablePage: React.FC = React.memo(() => {
         onRowClick={handleRowClick}
         onCellClick={handleCellClick}
         rowStyle={handleRowStyle}
-        // isInternalFilter={isInternalFilter}
         emptyText="직원 데이터가 없습니다."
         loadingText="직원 데이터를 불러오는 중..."
         className="custom-table"

@@ -1,15 +1,9 @@
-import React, {
-  useState,
-  useEffect,
-  useCallback,
-  useMemo,
-  useRef,
-} from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import type {
   ColumnInfo,
   FilterValue,
-  TableProps,
   TableData,
+  TableProps,
 } from "../types/table";
 import CustomSelect from "./CustomSelect";
 
@@ -18,219 +12,138 @@ const FilterInput = React.memo<{
   column: ColumnInfo;
   filters: FilterValue;
   onChange: (key: string, value: string | number | null) => void;
-  onFocus: (key: string) => void;
-  onBlur: () => void;
   onKeyUp: () => void;
-  focusedFilterKey: string | null;
-  focusedFilterSelection: { start: number; end: number } | null;
-  shouldRestoreFocus: boolean;
-  onSelectionChange: (selection: { start: number; end: number }) => void;
-}>(
-  ({
-    column,
-    filters,
-    onChange,
-    onFocus,
-    onBlur,
-    onKeyUp,
-    focusedFilterKey,
-    focusedFilterSelection,
-    shouldRestoreFocus,
-    onSelectionChange,
-  }) => {
-    const inputRef = useRef<HTMLInputElement>(null);
-
-    // 포커스 복원 로직
-    useEffect(() => {
-      if (shouldRestoreFocus && inputRef.current && focusedFilterKey) {
-        const element = inputRef.current;
-
-        // 포커스 설정
-        element.focus();
-
-        // 커서 위치 복원
-        if (focusedFilterSelection) {
-          const restoreCursor = () => {
-            try {
-              const maxPosition = element.value.length;
-              const start = Math.min(focusedFilterSelection.start, maxPosition);
-              const end = Math.min(focusedFilterSelection.end, maxPosition);
-              element.setSelectionRange(start, end);
-            } catch (error) {
-              console.warn("커서 위치 복원 실패:", error);
-            }
-          };
-
-          // 즉시 시도
-          restoreCursor();
-
-          // DOM 업데이트 후 다시 시도
-          requestAnimationFrame(restoreCursor);
-
-          // 추가 안전장치
-          setTimeout(restoreCursor, 10);
-        }
-      }
-    }, [shouldRestoreFocus, focusedFilterKey, focusedFilterSelection]);
-
-    // 필터가 없으면 null 반환
-    if (
-      !column.headerFilterOptions ||
-      column.headerFilterOptions.length === 0
-    ) {
-      return null;
-    }
-
-    // 여러 필터를 수직으로 배치
-    return (
-      <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-        {column.headerFilterOptions.map((filterConfig, index) => {
-          const filterValue = filters[filterConfig.key];
-          const isFocused = focusedFilterKey === filterConfig.key;
-
-          const handleChange = (
-            e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
-          ) => {
-            const value = e.target.value;
-            if (filterConfig.type === "number") {
-              // 숫자 타입인 경우 숫자로 변환
-              const numValue = value === "" ? null : Number(value);
-              onChange(filterConfig.key, numValue);
-            } else {
-              // 다른 타입은 문자열로 처리
-              onChange(filterConfig.key, value || null);
-            }
-          };
-
-          const handleSelectChange = (selectedValue: string) => {
-            if (selectedValue === "전체" || selectedValue === "") {
-              onChange(filterConfig.key, null);
-            } else {
-              onChange(filterConfig.key, selectedValue);
-            }
-          };
-
-          const handleFocus = () => {
-            onFocus(filterConfig.key);
-          };
-
-          const handleKeyUp = () => {
-            if (inputRef.current && isFocused) {
-              onSelectionChange({
-                start: inputRef.current.selectionStart || 0,
-                end: inputRef.current.selectionEnd || 0,
-              });
-            }
-            onKeyUp();
-          };
-
-          const handleMouseUp = () => {
-            if (inputRef.current && isFocused) {
-              onSelectionChange({
-                start: inputRef.current.selectionStart || 0,
-                end: inputRef.current.selectionEnd || 0,
-              });
-            }
-            onKeyUp();
-          };
-
-          const filterStyle: React.CSSProperties = {
-            width: "100%",
-            padding: "4px",
-            fontSize: "12px",
-            border: "1px solid #ddd",
-            borderRadius: "4px",
-            boxSizing: "border-box",
-            ...filterConfig.style,
-          };
-
-          const placeholder =
-            filterConfig.placeholder ||
-            `${filterConfig.label || filterConfig.key} 검색`;
-
-          switch (filterConfig.type) {
-            case "select": {
-              const options = [
-                { value: "", label: "전체" },
-                ...(filterConfig.options || []),
-              ];
-
-              return (
-                <CustomSelect
-                  key={`${column.key}-${filterConfig.key}-${index}`}
-                  value={typeof filterValue === "string" ? filterValue : ""}
-                  onChange={handleSelectChange}
-                  options={options}
-                  placeholder={placeholder}
-                  searchable={filterConfig.searchable ?? true}
-                  className={filterConfig.className || ""}
-                  style={filterStyle}
-                />
-              );
-            }
-
-            case "number":
-              return (
-                <input
-                  key={`${column.key}-${filterConfig.key}-${index}`}
-                  ref={isFocused ? inputRef : undefined}
-                  type="number"
-                  value={typeof filterValue === "number" ? filterValue : ""}
-                  onChange={handleChange}
-                  onFocus={handleFocus}
-                  onBlur={onBlur}
-                  onKeyUp={handleKeyUp}
-                  onMouseUp={handleMouseUp}
-                  placeholder={placeholder}
-                  min={filterConfig.min}
-                  max={filterConfig.max}
-                  step={filterConfig.step}
-                  className={filterConfig.className || ""}
-                  style={filterStyle}
-                />
-              );
-
-            case "date":
-              return (
-                <input
-                  key={`${column.key}-${filterConfig.key}-${index}`}
-                  ref={isFocused ? inputRef : undefined}
-                  type="date"
-                  value={typeof filterValue === "string" ? filterValue : ""}
-                  onChange={handleChange}
-                  onFocus={handleFocus}
-                  onBlur={onBlur}
-                  onKeyUp={handleKeyUp}
-                  onMouseUp={handleMouseUp}
-                  className={filterConfig.className || ""}
-                  style={filterStyle}
-                />
-              );
-
-            case "text":
-            default:
-              return (
-                <input
-                  key={`${column.key}-${filterConfig.key}-${index}`}
-                  ref={isFocused ? inputRef : undefined}
-                  type="text"
-                  value={typeof filterValue === "string" ? filterValue : ""}
-                  onChange={handleChange}
-                  onFocus={handleFocus}
-                  onBlur={onBlur}
-                  onKeyUp={handleKeyUp}
-                  onMouseUp={handleMouseUp}
-                  placeholder={placeholder}
-                  className={filterConfig.className || ""}
-                  style={filterStyle}
-                />
-              );
-          }
-        })}
-      </div>
-    );
+}>(({ column, filters, onChange, onKeyUp }) => {
+  // 필터가 없으면 null 반환
+  if (!column.headerFilterOptions || column.headerFilterOptions.length === 0) {
+    return null;
   }
-);
+
+  // 여러 필터를 수직으로 배치
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+      {column.headerFilterOptions.map((filterConfig) => {
+        const filterValue = filters[filterConfig.key];
+
+        const handleChange = (
+          e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+        ) => {
+          const value = e.target.value;
+          if (filterConfig.type === "number") {
+            // 숫자 타입인 경우 숫자로 변환
+            const numValue = value === "" ? null : Number(value);
+            onChange(filterConfig.key, numValue);
+          } else {
+            // 다른 타입은 문자열로 처리
+            onChange(filterConfig.key, value || null);
+          }
+        };
+
+        const handleSelectChange = (selectedValue: string) => {
+          if (selectedValue === "전체" || selectedValue === "") {
+            onChange(filterConfig.key, null);
+          } else {
+            onChange(filterConfig.key, selectedValue);
+          }
+        };
+
+        const handleKeyUp = () => {
+          onKeyUp();
+        };
+
+        const handleMouseUp = () => {
+          onKeyUp();
+        };
+
+        const filterStyle: React.CSSProperties = {
+          width: "100%",
+          padding: "4px",
+          fontSize: "12px",
+          border: "1px solid #ddd",
+          borderRadius: "4px",
+          boxSizing: "border-box",
+          ...filterConfig.style,
+        };
+
+        const placeholder =
+          filterConfig.placeholder ||
+          `${filterConfig.label || filterConfig.key} 검색`;
+
+        switch (filterConfig.type) {
+          case "select": {
+            const options = [
+              { value: "", label: "전체" },
+              ...(filterConfig.options || []),
+            ];
+
+            return (
+              <CustomSelect
+                key={`${column.key}`}
+                value={typeof filterValue === "string" ? filterValue : ""}
+                onChange={handleSelectChange}
+                options={options}
+                placeholder={placeholder}
+                searchable={filterConfig.searchable ?? true}
+                className={filterConfig.className || ""}
+                style={filterStyle}
+              />
+            );
+          }
+
+          case "number":
+            return (
+              <input
+                key={`${column.key}`}
+                type="number"
+                value={typeof filterValue === "number" ? filterValue : ""}
+                onChange={handleChange}
+                onKeyUp={handleKeyUp}
+                onMouseUp={handleMouseUp}
+                placeholder={placeholder}
+                min={filterConfig.min}
+                max={filterConfig.max}
+                step={filterConfig.step}
+                className={filterConfig.className || ""}
+                style={filterStyle}
+              />
+            );
+
+          case "date":
+            return (
+              <input
+                key={`${column.key}`}
+                type="date"
+                value={typeof filterValue === "string" ? filterValue : ""}
+                onChange={handleChange}
+                onKeyUp={handleKeyUp}
+                onMouseUp={handleMouseUp}
+                className={filterConfig.className || ""}
+                style={filterStyle}
+              />
+            );
+
+          case "text":
+          default: {
+            console.info(column.key);
+            return (
+              <input
+                key={`${column.key}`}
+                type="text"
+                value={typeof filterValue === "string" ? filterValue : ""}
+                onChange={handleChange}
+                onKeyUp={handleKeyUp}
+                onMouseUp={handleMouseUp}
+                placeholder={placeholder}
+                className={filterConfig.className || ""}
+                style={filterStyle}
+              />
+            );
+          }
+        }
+      })}
+    </div>
+  );
+});
 
 FilterInput.displayName = "FilterInput";
 
@@ -239,27 +152,15 @@ const FilterRow = React.memo<{
   columnInfo: ColumnInfo[];
   filters: FilterValue;
   onFilterChange: (key: string, value: string | number | null) => void;
-  onFilterFocus: (key: string) => void;
-  onFilterBlur: () => void;
   onFilterKeyUp: () => void;
-  onSelectionChange: (selection: { start: number; end: number }) => void;
   filterHeaderStyles: React.CSSProperties;
-  focusedFilterKey: string | null;
-  focusedFilterSelection: { start: number; end: number } | null;
-  shouldRestoreFocus: boolean;
 }>(
   ({
     columnInfo,
     filters,
     onFilterChange,
-    onFilterFocus,
-    onFilterBlur,
     onFilterKeyUp,
-    onSelectionChange,
     filterHeaderStyles,
-    focusedFilterKey,
-    focusedFilterSelection,
-    shouldRestoreFocus,
   }) => {
     return (
       <tr style={{ backgroundColor: "#fafafa" }}>
@@ -274,13 +175,7 @@ const FilterRow = React.memo<{
                 column={column}
                 filters={filters}
                 onChange={onFilterChange}
-                onFocus={onFilterFocus}
-                onBlur={onFilterBlur}
                 onKeyUp={onFilterKeyUp}
-                focusedFilterKey={focusedFilterKey}
-                focusedFilterSelection={focusedFilterSelection}
-                shouldRestoreFocus={shouldRestoreFocus}
-                onSelectionChange={onSelectionChange}
               />
             )}
           </th>
@@ -381,7 +276,7 @@ const TableRow = React.memo<{
           if (!bodyOptions) {
             return (
               <td
-                key={`${row.id}-${column.key}`}
+                key={`${column.key}`}
                 style={{
                   padding: "8px",
                   border: "1px solid #ddd",
@@ -410,7 +305,7 @@ const TableRow = React.memo<{
               : cellValue;
             return (
               <td
-                key={`${row.id}-${column.key}`}
+                key={`${column.key}`}
                 style={{
                   padding: "8px",
                   border: "1px solid #ddd",
@@ -461,23 +356,6 @@ const FilterableTable: React.FC<TableProps> = React.memo(
   }) => {
     const [filters, setFilters] = useState<FilterValue>({});
     const [debouncedFilters, setDebouncedFilters] = useState<FilterValue>({});
-    const [focusedFilterKey, setFocusedFilterKey] = useState<string | null>(
-      null
-    );
-    const [focusedFilterSelection, setFocusedFilterSelection] = useState<{
-      start: number;
-      end: number;
-    } | null>(null);
-    const [shouldRestoreFocus, setShouldRestoreFocus] = useState(false);
-
-    // 로딩 상태가 false로 변경되면 포커스 복원 플래그 설정
-    useEffect(() => {
-      if (!loading && focusedFilterKey) {
-        setShouldRestoreFocus(true);
-        // 다음 렌더링에서 플래그를 false로 설정
-        setTimeout(() => setShouldRestoreFocus(false), 0);
-      }
-    }, [loading, focusedFilterKey]);
 
     // Debounce 필터링 (API 호출용, 300ms)
     useEffect(() => {
@@ -509,32 +387,10 @@ const FilterableTable: React.FC<TableProps> = React.memo(
       []
     );
 
-    // 필터 포커스 핸들러
-    const handleFilterFocus = useCallback((key: string) => {
-      setFocusedFilterKey(key);
-    }, []);
-
-    // 필터 블러 핸들러
-    const handleFilterBlur = useCallback(() => {
-      // 약간의 지연 후 포커스 키 제거 (다른 필터로 이동하는 경우 고려)
-      setTimeout(() => {
-        setFocusedFilterKey(null);
-        setFocusedFilterSelection(null);
-      }, 100);
-    }, []);
-
     // 실시간 커서 위치 추적 핸들러
     const handleFilterKeyUp = useCallback(() => {
       // 커서 위치 추적은 FilterInput 컴포넌트 내부에서 처리
     }, []);
-
-    // 커서 위치 변경 핸들러
-    const handleSelectionChange = useCallback(
-      (selection: { start: number; end: number }) => {
-        setFocusedFilterSelection(selection);
-      },
-      []
-    );
 
     const handleSelectAll = useCallback(
       (checked: boolean) => {
@@ -696,14 +552,8 @@ const FilterableTable: React.FC<TableProps> = React.memo(
               columnInfo={columnInfo}
               filters={filters}
               onFilterChange={handleFilterChange}
-              onFilterFocus={handleFilterFocus}
-              onFilterBlur={handleFilterBlur}
               onFilterKeyUp={handleFilterKeyUp}
-              onSelectionChange={handleSelectionChange}
               filterHeaderStyles={filterHeaderStyles}
-              focusedFilterKey={focusedFilterKey}
-              focusedFilterSelection={focusedFilterSelection}
-              shouldRestoreFocus={shouldRestoreFocus}
             />
           </thead>
 

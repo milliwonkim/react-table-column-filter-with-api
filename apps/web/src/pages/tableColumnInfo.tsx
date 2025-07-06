@@ -157,21 +157,6 @@ const columnInfo: ColumnInfo[] = [
         min: 0,
         max: 100,
       },
-      {
-        key: "location",
-        type: "select",
-        placeholder: "지역 선택",
-        options: [
-          { value: "서울", label: "서울" },
-          { value: "부산", label: "부산" },
-          { value: "대구", label: "대구" },
-          { value: "인천", label: "인천" },
-          { value: "광주", label: "광주" },
-          { value: "대전", label: "대전" },
-          { value: "울산", label: "울산" },
-          { value: "경기", label: "경기" },
-        ],
-      },
     ],
     bodyOptions: {
       align: "center",
@@ -192,26 +177,33 @@ const columnInfo: ColumnInfo[] = [
     label: "지역",
     type: "default",
     width: "100px",
-    filterable: false, // 나이 컬럼에서 이미 처리하므로 비활성화
+    filterable: true,
     headerOptions: {
       align: "center",
-      tooltip: "거주 지역",
+      tooltip: "직원의 근무 지역",
       icon: "📍",
     },
+    headerFilterOptions: [
+      {
+        key: "location",
+        type: "select",
+        placeholder: "지역 선택",
+        options: [
+          { value: "서울", label: "서울" },
+          { value: "부산", label: "부산" },
+          { value: "대구", label: "대구" },
+          { value: "인천", label: "인천" },
+          { value: "광주", label: "광주" },
+          { value: "대전", label: "대전" },
+          { value: "울산", label: "울산" },
+          { value: "경기", label: "경기" },
+        ],
+      },
+    ],
     bodyOptions: {
       align: "center",
       formatter: (value) => (
-        <span
-          style={{
-            padding: "2px 6px",
-            borderRadius: "12px",
-            fontSize: "11px",
-            backgroundColor: "#f8f9fa",
-            border: "1px solid #dee2e6",
-          }}
-        >
-          {String(value)}
-        </span>
+        <span style={{ color: "#666" }}>{String(value)}</span>
       ),
     },
   },
