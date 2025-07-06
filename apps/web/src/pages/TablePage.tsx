@@ -1,9 +1,9 @@
-import axios from "axios";
 import React, { useCallback, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import FilterableTable from "../components/FilterableTable";
 import type { FilterValue, TableData } from "../types/table";
 import { columnInfo } from "./tableColumnInfo";
+import apiClient from "../utils/axios";
 
 const TablePage: React.FC = React.memo(() => {
   const [selectedRows, setSelectedRows] = useState<(string | number)[]>([]);
@@ -18,20 +18,9 @@ const TablePage: React.FC = React.memo(() => {
   } = useQuery({
     queryKey: ["tableData", {}], // 원본 데이터는 필터 없이 가져오기
     queryFn: async () => {
-      const token = localStorage.getItem("access_token");
-      if (!token) {
-        throw new Error("로그인이 필요합니다.");
-      }
-
-      const response = await axios.get(
-        "http://localhost:3000/tasks/table-data",
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-          params: {},
-        }
-      );
+      const response = await apiClient.get("/tasks/table-data", {
+        params: {},
+      });
 
       return response.data.data;
     },
@@ -47,11 +36,6 @@ const TablePage: React.FC = React.memo(() => {
   } = useQuery({
     queryKey: ["tableData", filters],
     queryFn: async () => {
-      const token = localStorage.getItem("access_token");
-      if (!token) {
-        throw new Error("로그인이 필요합니다.");
-      }
-
       // 필터에서 빈 값 제거
       const cleanFilters = Object.fromEntries(
         Object.entries(filters).filter(
@@ -59,15 +43,9 @@ const TablePage: React.FC = React.memo(() => {
         )
       );
 
-      const response = await axios.get(
-        "http://localhost:3000/tasks/table-data",
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-          params: cleanFilters,
-        }
-      );
+      const response = await apiClient.get("/tasks/table-data", {
+        params: cleanFilters,
+      });
 
       return response.data.data;
     },

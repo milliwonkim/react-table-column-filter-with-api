@@ -2,6 +2,9 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import TablePage from "./pages/TablePage";
+import { setCookie, getCookie, deleteCookie } from "./utils/cookies";
+import apiClient from "./utils/axios";
+import { config } from "./config";
 
 interface LoginForm {
   username: string;
@@ -27,7 +30,7 @@ const App: React.FC = () => {
 
   // 페이지 로드 시 토큰 확인
   useEffect(() => {
-    const savedToken = localStorage.getItem("access_token");
+    const savedToken = getCookie(config.token.name);
     if (savedToken) {
       setToken(savedToken);
       setIsLoggedIn(true);
@@ -43,12 +46,16 @@ const App: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await axios.post<{ access_token: string }>(
-        "http://localhost:3000/auth/login",
+      const res = await apiClient.post<{ access_token: string }>(
+        "/auth/login",
         form
       );
       setToken(res.data.access_token);
-      localStorage.setItem("access_token", res.data.access_token);
+      setCookie(config.token.name, res.data.access_token, {
+        expires: config.cookie.expiresDays,
+        secure: config.cookie.secure,
+        sameSite: config.cookie.sameSite,
+      });
       setIsLoggedIn(true);
     } catch (err) {
       if (axios.isAxiosError(err)) {
@@ -64,7 +71,7 @@ const App: React.FC = () => {
 
   // 로그아웃 핸들러
   const handleLogout = () => {
-    localStorage.removeItem("access_token");
+    deleteCookie(config.token.name);
     setToken(null);
     setIsLoggedIn(false);
     setForm({ username: "", password: "" });
