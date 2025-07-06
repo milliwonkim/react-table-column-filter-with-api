@@ -154,6 +154,14 @@ const TablePage: React.FC = React.memo(() => {
     };
   }, []);
 
+  // 필터 키 생성 함수
+  const getFilterKey = useCallback((columnKey: string, filterKey: string) => {
+    // 예시: 더 구체적인 필터 키 생성
+    // 실제로는 columnKey와 filterKey가 같은 경우가 많지만,
+    // 필요에 따라 다른 로직을 적용할 수 있습니다
+    return `${columnKey}_filter_${filterKey}`;
+  }, []);
+
   if (error) {
     return (
       <div style={{ padding: "20px", textAlign: "center" }}>
@@ -177,7 +185,8 @@ const TablePage: React.FC = React.memo(() => {
       <h1>직원 관리 테이블</h1>
       <p style={{ color: "#666", marginBottom: "20px" }}>
         필터 입력 시 포커스가 유지되며, API 응답 후에도 입력 중인 필터에
-        포커스가 복원됩니다.
+        포커스가 복원됩니다. 필터를 입력하고 API가 응답해도 포커스가 사라지지
+        않습니다.
       </p>
 
       <div style={{ marginBottom: "20px" }}>
@@ -258,6 +267,8 @@ const TablePage: React.FC = React.memo(() => {
         emptyText="직원 데이터가 없습니다."
         loadingText="직원 데이터를 불러오는 중..."
         className="custom-table"
+        getRowKey={(data) => String(data.id)}
+        getFilterKey={getFilterKey}
         style={{
           border: "1px solid #dee2e6",
           borderRadius: "8px",

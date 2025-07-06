@@ -1,4 +1,10 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  useRef,
+} from "react";
 import type {
   ColumnInfo,
   FilterValue,
@@ -13,137 +19,303 @@ const FilterInput = React.memo<{
   filters: FilterValue;
   onChange: (key: string, value: string | number | null) => void;
   onKeyUp: () => void;
-}>(({ column, filters, onChange, onKeyUp }) => {
-  // 필터가 없으면 null 반환
-  if (!column.headerFilterOptions || column.headerFilterOptions.length === 0) {
-    return null;
-  }
+  onFocus: (columnKey: string, filterKey: string) => void;
+  onBlur: () => void;
+  focusedFilter: string | null;
+  getFilterKey: (columnKey: string, filterKey: string) => string;
+}>(
+  ({
+    column,
+    filters,
+    onChange,
+    onKeyUp,
+    onFocus,
+    onBlur,
+    focusedFilter,
+    getFilterKey,
+  }) => {
+    const inputRefs = useRef<{ [key: string]: HTMLInputElement | null }>({});
+    const cursorPositions = useRef<{ [key: string]: number }>({});
 
-  // 여러 필터를 수직으로 배치
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-      {column.headerFilterOptions.map((filterConfig) => {
-        const filterValue = filters[filterConfig.key];
+    // 포커스 복원 효과
+    useEffect(() => {
+      column.headerFilterOptions?.forEach((filterConfig) => {
+        const filterId = getFilterKey(column.key, filterConfig.key);
+        if (focusedFilter === filterId && inputRefs.current[filterId]) {
+          const input = inputRefs.current[filterId];
+          input?.focus();
 
-        const handleChange = (
-          e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
-        ) => {
-          const value = e.target.value;
-          if (filterConfig.type === "number") {
-            // 숫자 타입인 경우 숫자로 변환
-            const numValue = value === "" ? null : Number(value);
-            onChange(filterConfig.key, numValue);
-          } else {
-            // 다른 타입은 문자열로 처리
-            onChange(filterConfig.key, value || null);
-          }
-        };
-
-        const handleSelectChange = (selectedValue: string) => {
-          if (selectedValue === "전체" || selectedValue === "") {
-            onChange(filterConfig.key, null);
-          } else {
-            onChange(filterConfig.key, selectedValue);
-          }
-        };
-
-        const handleKeyUp = () => {
-          onKeyUp();
-        };
-
-        const handleMouseUp = () => {
-          onKeyUp();
-        };
-
-        const filterStyle: React.CSSProperties = {
-          width: "100%",
-          padding: "4px",
-          fontSize: "12px",
-          border: "1px solid #ddd",
-          borderRadius: "4px",
-          boxSizing: "border-box",
-          ...filterConfig.style,
-        };
-
-        const placeholder =
-          filterConfig.placeholder ||
-          `${filterConfig.label || filterConfig.key} 검색`;
-
-        switch (filterConfig.type) {
-          case "select": {
-            const options = [
-              { value: "", label: "전체" },
-              ...(filterConfig.options || []),
-            ];
-
-            return (
-              <CustomSelect
-                key={`${column.key}`}
-                value={typeof filterValue === "string" ? filterValue : ""}
-                onChange={handleSelectChange}
-                options={options}
-                placeholder={placeholder}
-                searchable={filterConfig.searchable ?? true}
-                className={filterConfig.className || ""}
-                style={filterStyle}
-              />
-            );
-          }
-
-          case "number":
-            return (
-              <input
-                key={`${column.key}`}
-                type="number"
-                value={typeof filterValue === "number" ? filterValue : ""}
-                onChange={handleChange}
-                onKeyUp={handleKeyUp}
-                onMouseUp={handleMouseUp}
-                placeholder={placeholder}
-                min={filterConfig.min}
-                max={filterConfig.max}
-                step={filterConfig.step}
-                className={filterConfig.className || ""}
-                style={filterStyle}
-              />
-            );
-
-          case "date":
-            return (
-              <input
-                key={`${column.key}`}
-                type="date"
-                value={typeof filterValue === "string" ? filterValue : ""}
-                onChange={handleChange}
-                onKeyUp={handleKeyUp}
-                onMouseUp={handleMouseUp}
-                className={filterConfig.className || ""}
-                style={filterStyle}
-              />
-            );
-
-          case "text":
-          default: {
-            console.info(column.key);
-            return (
-              <input
-                key={`${column.key}`}
-                type="text"
-                value={typeof filterValue === "string" ? filterValue : ""}
-                onChange={handleChange}
-                onKeyUp={handleKeyUp}
-                onMouseUp={handleMouseUp}
-                placeholder={placeholder}
-                className={filterConfig.className || ""}
-                style={filterStyle}
-              />
-            );
+          // 저장된 커서 위치로 복원
+          const savedPosition = cursorPositions.current[filterId];
+          if (savedPosition !== undefined && input) {
+            // 입력값 길이를 초과하지 않도록 제한
+            const maxPosition = input.value.length;
+            const position = Math.min(savedPosition, maxPosition);
+            input.setSelectionRange(position, position);
           }
         }
-      })}
-    </div>
-  );
-});
+      });
+    }, [focusedFilter, column.key, column.headerFilterOptions, getFilterKey]);
+
+    // 필터가 없으면 null 반환
+    if (
+      !column.headerFilterOptions ||
+      column.headerFilterOptions.length === 0
+    ) {
+      return null;
+    }
+
+    // 여러 필터를 수직으로 배치
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+        {column.headerFilterOptions.map((filterConfig) => {
+          const filterValue = filters[filterConfig.key];
+          const filterId = getFilterKey(column.key, filterConfig.key);
+
+          const handleChange = (
+            e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+          ) => {
+            const value = e.target.value;
+
+            // HTMLInputElement인 경우에만 커서 위치 계산
+            if (e.target instanceof HTMLInputElement) {
+              const input = e.target;
+              const currentCursorPosition = input.selectionStart || 0;
+
+              // 이전 값 가져오기
+              const previousValue =
+                typeof filterValue === "string" ? filterValue : "";
+
+              // 값이 변경된 위치 찾기
+              let newCursorPosition = currentCursorPosition;
+
+              if (value.length > previousValue.length) {
+                // 문자 추가된 경우
+                // 추가된 문자가 삽입된 위치를 찾기
+                for (
+                  let i = 0;
+                  i < Math.min(value.length, previousValue.length);
+                  i++
+                ) {
+                  if (value[i] !== previousValue[i]) {
+                    newCursorPosition = i + 1; // 삽입된 위치 다음으로 커서 이동
+                    break;
+                  }
+                }
+                if (
+                  value.length > previousValue.length &&
+                  value.startsWith(previousValue)
+                ) {
+                  // 끝에 추가된 경우
+                  newCursorPosition = previousValue.length + 1;
+                }
+              } else if (value.length < previousValue.length) {
+                // 문자 삭제된 경우
+                // 삭제된 위치를 찾기
+                for (
+                  let i = 0;
+                  i < Math.min(value.length, previousValue.length);
+                  i++
+                ) {
+                  if (value[i] !== previousValue[i]) {
+                    newCursorPosition = i; // 삭제된 위치에 커서 유지
+                    break;
+                  }
+                }
+                if (
+                  value.length < previousValue.length &&
+                  previousValue.startsWith(value)
+                ) {
+                  // 끝에서 삭제된 경우
+                  newCursorPosition = value.length;
+                }
+              }
+
+              // 커서 위치 저장 (계산된 위치 사용)
+              cursorPositions.current[filterId] = newCursorPosition;
+            }
+
+            if (filterConfig.type === "number") {
+              // 숫자 타입인 경우 숫자로 변환
+              const numValue = value === "" ? null : Number(value);
+              onChange(filterConfig.key, numValue);
+            } else {
+              // 다른 타입은 문자열로 처리
+              onChange(filterConfig.key, value || null);
+            }
+          };
+
+          const handleInput = () => {
+            // 입력 중에도 커서 위치 저장 (HTMLInputElement인 경우에만)
+            const input = inputRefs.current[filterId];
+            if (input && input instanceof HTMLInputElement) {
+              const currentPosition = input.selectionStart || 0;
+              // onChange에서 계산한 위치가 없거나 현재 위치가 더 정확한 경우에만 저장
+              if (
+                cursorPositions.current[filterId] === undefined ||
+                Math.abs(
+                  currentPosition - (cursorPositions.current[filterId] || 0)
+                ) <= 1
+              ) {
+                cursorPositions.current[filterId] = currentPosition;
+              }
+            }
+          };
+
+          const handleSelect = () => {
+            // 선택 영역 변경 시에도 커서 위치 저장 (HTMLInputElement인 경우에만)
+            const input = inputRefs.current[filterId];
+            if (input && input instanceof HTMLInputElement) {
+              cursorPositions.current[filterId] = input.selectionStart || 0;
+            }
+          };
+
+          const handleSelectChange = (selectedValue: string) => {
+            if (selectedValue === "전체" || selectedValue === "") {
+              onChange(filterConfig.key, null);
+            } else {
+              onChange(filterConfig.key, selectedValue);
+            }
+          };
+
+          const handleKeyUp = () => {
+            // HTMLInputElement인 경우에만 커서 위치 저장
+            const input = inputRefs.current[filterId];
+            if (input && input instanceof HTMLInputElement) {
+              cursorPositions.current[filterId] = input.selectionStart || 0;
+            }
+            onKeyUp();
+          };
+
+          const handleMouseUp = () => {
+            // HTMLInputElement인 경우에만 커서 위치 저장
+            const input = inputRefs.current[filterId];
+            if (input && input instanceof HTMLInputElement) {
+              cursorPositions.current[filterId] = input.selectionStart || 0;
+            }
+            onKeyUp();
+          };
+
+          const handleFocus = () => {
+            onFocus(column.key, filterConfig.key);
+          };
+
+          const handleBlur = () => {
+            onBlur();
+          };
+
+          const filterStyle: React.CSSProperties = {
+            width: "100%",
+            padding: "4px",
+            fontSize: "12px",
+            border: "1px solid #ddd",
+            borderRadius: "4px",
+            boxSizing: "border-box",
+            ...filterConfig.style,
+          };
+
+          const placeholder =
+            filterConfig.placeholder ||
+            `${filterConfig.label || filterConfig.key} 검색`;
+
+          switch (filterConfig.type) {
+            case "select": {
+              const options = [
+                { value: "", label: "전체" },
+                ...(filterConfig.options || []),
+              ];
+
+              return (
+                <CustomSelect
+                  key={`${column.key}-${filterConfig.key}`}
+                  value={typeof filterValue === "string" ? filterValue : ""}
+                  onChange={handleSelectChange}
+                  options={options}
+                  placeholder={placeholder}
+                  searchable={filterConfig.searchable ?? true}
+                  className={filterConfig.className || ""}
+                  style={filterStyle}
+                  onFocus={handleFocus}
+                  onBlur={handleBlur}
+                />
+              );
+            }
+
+            case "number":
+              return (
+                <input
+                  key={`${column.key}-${filterConfig.key}`}
+                  ref={(el) => {
+                    inputRefs.current[filterId] = el;
+                  }}
+                  type="number"
+                  value={typeof filterValue === "number" ? filterValue : ""}
+                  onChange={handleChange}
+                  onInput={handleInput}
+                  onSelect={handleSelect}
+                  onKeyUp={handleKeyUp}
+                  onMouseUp={handleMouseUp}
+                  onFocus={handleFocus}
+                  onBlur={handleBlur}
+                  placeholder={placeholder}
+                  min={filterConfig.min}
+                  max={filterConfig.max}
+                  step={filterConfig.step}
+                  className={filterConfig.className || ""}
+                  style={filterStyle}
+                />
+              );
+
+            case "date":
+              return (
+                <input
+                  key={`${column.key}-${filterConfig.key}`}
+                  ref={(el) => {
+                    inputRefs.current[filterId] = el;
+                  }}
+                  type="date"
+                  value={typeof filterValue === "string" ? filterValue : ""}
+                  onChange={handleChange}
+                  onInput={handleInput}
+                  onSelect={handleSelect}
+                  onKeyUp={handleKeyUp}
+                  onMouseUp={handleMouseUp}
+                  onFocus={handleFocus}
+                  onBlur={handleBlur}
+                  className={filterConfig.className || ""}
+                  style={filterStyle}
+                />
+              );
+
+            case "text":
+            default: {
+              return (
+                <input
+                  key={`${column.key}-${filterConfig.key}`}
+                  ref={(el) => {
+                    inputRefs.current[filterId] = el;
+                  }}
+                  type="text"
+                  value={typeof filterValue === "string" ? filterValue : ""}
+                  onChange={handleChange}
+                  onInput={handleInput}
+                  onSelect={handleSelect}
+                  onKeyUp={handleKeyUp}
+                  onMouseUp={handleMouseUp}
+                  onFocus={handleFocus}
+                  onBlur={handleBlur}
+                  placeholder={placeholder}
+                  className={filterConfig.className || ""}
+                  style={filterStyle}
+                />
+              );
+            }
+          }
+        })}
+      </div>
+    );
+  }
+);
 
 FilterInput.displayName = "FilterInput";
 
@@ -153,14 +325,22 @@ const FilterRow = React.memo<{
   filters: FilterValue;
   onFilterChange: (key: string, value: string | number | null) => void;
   onFilterKeyUp: () => void;
+  onFilterFocus: (columnKey: string, filterKey: string) => void;
+  onFilterBlur: () => void;
+  focusedFilter: string | null;
   filterHeaderStyles: React.CSSProperties;
+  getFilterKey: (columnKey: string, filterKey: string) => string;
 }>(
   ({
     columnInfo,
     filters,
     onFilterChange,
     onFilterKeyUp,
+    onFilterFocus,
+    onFilterBlur,
+    focusedFilter,
     filterHeaderStyles,
+    getFilterKey,
   }) => {
     return (
       <tr style={{ backgroundColor: "#fafafa" }}>
@@ -176,6 +356,10 @@ const FilterRow = React.memo<{
                 filters={filters}
                 onChange={onFilterChange}
                 onKeyUp={onFilterKeyUp}
+                onFocus={onFilterFocus}
+                onBlur={onFilterBlur}
+                focusedFilter={focusedFilter}
+                getFilterKey={getFilterKey}
               />
             )}
           </th>
@@ -352,10 +536,14 @@ const FilterableTable: React.FC<TableProps> = React.memo(
     loadingText = "데이터를 불러오는 중...",
     className,
     style,
+    getRowKey,
+    getFilterKey = (columnKey: string, filterKey: string) =>
+      `${columnKey}-${filterKey}`,
     isInternalFilter = false,
   }) => {
     const [filters, setFilters] = useState<FilterValue>({});
     const [debouncedFilters, setDebouncedFilters] = useState<FilterValue>({});
+    const [focusedFilter, setFocusedFilter] = useState<string | null>(null);
 
     // Debounce 필터링 (API 호출용, 300ms)
     useEffect(() => {
@@ -390,6 +578,18 @@ const FilterableTable: React.FC<TableProps> = React.memo(
     // 실시간 커서 위치 추적 핸들러
     const handleFilterKeyUp = useCallback(() => {
       // 커서 위치 추적은 FilterInput 컴포넌트 내부에서 처리
+    }, []);
+
+    // 포커스 관리 핸들러
+    const handleFilterFocus = useCallback(
+      (columnKey: string, filterKey: string) => {
+        setFocusedFilter(getFilterKey(columnKey, filterKey));
+      },
+      [getFilterKey]
+    );
+
+    const handleFilterBlur = useCallback(() => {
+      setFocusedFilter(null);
     }, []);
 
     const handleSelectAll = useCallback(
@@ -553,14 +753,18 @@ const FilterableTable: React.FC<TableProps> = React.memo(
               filters={filters}
               onFilterChange={handleFilterChange}
               onFilterKeyUp={handleFilterKeyUp}
+              onFilterFocus={handleFilterFocus}
+              onFilterBlur={handleFilterBlur}
+              focusedFilter={focusedFilter}
               filterHeaderStyles={filterHeaderStyles}
+              getFilterKey={getFilterKey}
             />
           </thead>
 
           <tbody>
             {data.map((row, index) => (
               <TableRow
-                key={row.id}
+                key={getRowKey(row)}
                 row={row}
                 columnInfo={columnInfo}
                 selectedRows={selectedRows}

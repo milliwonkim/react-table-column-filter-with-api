@@ -25,6 +25,8 @@ interface CustomSelectProps {
   className?: string;
   style?: React.CSSProperties;
   disabled?: boolean;
+  onFocus?: () => void;
+  onBlur?: () => void;
 }
 
 const CustomSelect: React.FC<CustomSelectProps> = ({
@@ -36,6 +38,8 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
   className = "",
   style = {},
   disabled = false,
+  onFocus,
+  onBlur,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
@@ -126,6 +130,8 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
           }
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
+          onFocus={onFocus}
+          onBlur={onBlur}
           placeholder={placeholder}
           disabled={disabled}
           style={{
